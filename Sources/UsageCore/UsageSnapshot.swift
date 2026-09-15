@@ -1,7 +1,7 @@
 import Foundation
 
 public enum UsageService: String, Codable, CaseIterable, Identifiable, Sendable {
-    case codex, cursor, claude
+    case codex, claude, cursor
     case grokBot
 
     public var id: String { rawValue }

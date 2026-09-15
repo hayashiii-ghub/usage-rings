@@ -17,15 +17,15 @@ public struct UsageRingsView: View {
                            compact ? (geometry.size.height - 54) / 2 : geometry.size.height * 0.62))
             if compact {
                 VStack(spacing: 14) {
-                    HStack(spacing: 20) { ring(.codex, size: size); ring(.cursor, size: size) }
-                    HStack(spacing: 20) { ring(.claude, size: size); fourthRing(size: size) }
+                    HStack(spacing: 20) { ring(.codex, size: size); ring(.claude, size: size) }
+                    HStack(spacing: 20) { ring(.cursor, size: size); fourthRing(size: size) }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 HStack(alignment: .top, spacing: 16) {
                     ring(.codex, size: size)
-                    ring(.cursor, size: size)
                     ring(.claude, size: size)
+                    ring(.cursor, size: size)
                     fourthRing(size: size)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
