@@ -15,6 +15,7 @@ cp "$BIN_DIR/UsageRingsWidget" "$WIDGET/Contents/MacOS/UsageRingsWidget"
 cp -R "$BIN_DIR/UsageRings_UsageCore.bundle" "$APP/Contents/Resources/"
 cp -R "$BIN_DIR/UsageRings_UsageCore.bundle" "$WIDGET/Contents/Resources/"
 cp LICENSE THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/"
+"$ROOT_DIR/script/icon.sh" "$APP/Contents/Resources/AppIcon.icns"
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -24,6 +25,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleName</key><string>Usage Rings</string>
 <key>CFBundleDisplayName</key><string>Usage Rings</string>
 <key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundleShortVersionString</key><string>0.1.0</string>
 <key>CFBundleVersion</key><string>1</string>
 <key>LSMinimumSystemVersion</key><string>26.0</string>
