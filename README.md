@@ -1,6 +1,6 @@
 # Usage Rings
 
-Personal macOS widget for remaining Codex, Cursor, Claude Code, and Grok Bot usage.
+Personal macOS widget for remaining Codex, Claude, Cursor, and Grok Bot usage.
 Requires macOS 26+ and Xcode to build. This is independent of Context.
 
 ## Install or update
@@ -12,7 +12,9 @@ make install
 The app installs into `~/Applications/Usage Rings.app` and opens its detail window.
 Right-click the desktop, choose **Edit Widgets**, and add **Usage Rings → AI Usage**.
 Keep the app running; it refreshes every five minutes and after waking from sleep.
-The menu-bar icon opens details or quits the app. There is no automatic updater or
+The menu-bar icon opens details or quits the app.
+Installation also connects Claude Code’s status line to the bundled helper; an existing
+custom status line is preserved and must be composed manually before connecting. There is no automatic updater or
 GitHub Release workflow. To start it after login, add Usage Rings to macOS Login Items.
 
 ## Accounts
@@ -24,15 +26,28 @@ turn off **Show AI usage** to stop polling.
 | --- | --- | --- |
 | Codex | `~/.codex/auth.json` | Lowest remaining main window |
 | Cursor | Cursor desktop session | Reported monthly plan percentage |
-| Claude | `~/.claude/.credentials.json` | Lowest remaining 5-hour / weekly window |
+| Claude | Claude Code status-line output (v2.1.251+, Pro/Max) | Lowest remaining 5-hour / weekly window |
 | Grok Bot | Same Cursor desktop account used by Grok Bot | Weekly allowance |
 
-These are personal integrations using internal endpoints, so provider changes may
-require updates. API-key billing accounts and pooled Grok Bot enterprise quotas are
-not supported. Claude currently reads only its credentials file. Missing or expired
-files display unavailable; automatic refresh never falls back to Keychain access or
-opens a password dialog. Keychain-only Claude sessions are not currently supported.
+Codex, Cursor, and Grok Bot use internal endpoints, so provider changes may require
+updates. API-key billing accounts and pooled Grok Bot enterprise quotas are unsupported.
 No token refresh or account changes are made.
+
+Claude uses the official [status-line output](https://code.claude.com/docs/en/statusline#rate-limit-usage).
+Use Claude Code once after connecting; usage appears after an API response. The helper
+stores only the two main usage windows, receipt time, and hashed response markers under
+`~/Library/Caches/Usage Rings/`. It does not store the session payload, conversation paths,
+or workspace metadata. Usage Rings reads no Claude credentials or Keychain items and
+makes no Claude API requests. Repeated status-line UI events do not refresh the age of
+an old reading. Without new Claude Code activity, the ring becomes unavailable after
+20 minutes or when a reported reset passes. App refresh reads the cache every five minutes;
+use **Refresh** to pick it up immediately.
+
+To disconnect only this integration while keeping other Claude settings:
+
+```sh
+python3 script/claude-statusline-setup.py --uninstall
+```
 
 Login credentials stay out of the repository, logs, and widget data. The host contacts
 only the matching provider endpoints. The sandboxed widget reads sanitized values

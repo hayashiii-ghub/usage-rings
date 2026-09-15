@@ -56,23 +56,6 @@ public enum UsageResponseParser {
         return min(value, 100)
     }
 
-    public static func claude(_ data: Data, now: Date = Date()) throws -> ServiceUsage {
-        let response = try JSONDecoder().decode(ClaudeResponse.self, from: data)
-        let definitions = [("five_hour", "5 hours", response.five_hour), ("seven_day", "Week", response.seven_day),
-                           ("seven_day_sonnet", "Sonnet · week", response.seven_day_sonnet),
-                           ("seven_day_opus", "Opus · week", response.seven_day_opus)]
-        let windows = try definitions.compactMap { id, title, raw -> UsageWindow? in
-            guard let raw, let value = raw.utilization else { return nil }
-            let reset = raw.resets_at.flatMap(parseDate)
-            guard raw.resets_at == nil || reset != nil else { throw UsageReadError.invalidResponse }
-            return UsageWindow(id: id, title: title, usedPercent: try percent(value), resetsAt: reset)
-        }
-        guard windows.contains(where: { $0.id == "five_hour" || $0.id == "seven_day" }) else {
-            throw UsageReadError.invalidResponse
-        }
-        return ServiceUsage(service: .claude, state: .ready, windows: windows, updatedAt: now)
-    }
-
     private static func parseDate(_ value: String) -> Date? {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -85,18 +68,6 @@ private struct GrokBotResponse: Decodable {
     let nextResetTimestampUtc: String?
     let hasNonZeroIncludedLimit: Bool?
     let usesPooledEnterpriseAllowance: Bool?
-}
-
-private struct ClaudeWindow: Decodable {
-    let utilization: Double?
-    let resets_at: String?
-}
-
-private struct ClaudeResponse: Decodable {
-    let five_hour: ClaudeWindow?
-    let seven_day: ClaudeWindow?
-    let seven_day_sonnet: ClaudeWindow?
-    let seven_day_opus: ClaudeWindow?
 }
 
 private struct CodexResponse: Decodable {

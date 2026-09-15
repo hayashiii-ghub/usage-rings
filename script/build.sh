@@ -9,8 +9,9 @@ BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
 APP="$ROOT_DIR/dist/Usage Rings.app"
 WIDGET="$APP/Contents/PlugIns/UsageRingsWidget.appex"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$WIDGET/Contents/MacOS" "$WIDGET/Contents/Resources"
+mkdir -p "$APP/Contents/Helpers" "$APP/Contents/MacOS" "$APP/Contents/Resources" "$WIDGET/Contents/MacOS" "$WIDGET/Contents/Resources"
 cp "$BIN_DIR/UsageRings" "$APP/Contents/MacOS/UsageRings"
+cp "$BIN_DIR/UsageRingsStatusline" "$APP/Contents/Helpers/UsageRingsStatusline"
 cp "$BIN_DIR/UsageRingsWidget" "$WIDGET/Contents/MacOS/UsageRingsWidget"
 cp -R "$BIN_DIR/UsageRings_UsageCore.bundle" "$APP/Contents/Resources/"
 cp -R "$BIN_DIR/UsageRings_UsageCore.bundle" "$WIDGET/Contents/Resources/"
@@ -57,6 +58,7 @@ cat > "$WIDGET/Contents/Info.plist" <<'PLIST'
 </dict></plist>
 PLIST
 codesign --force --sign - --entitlements "$ROOT_DIR/Assets/Widget.entitlements" "$WIDGET"
+codesign --force --sign - "$APP/Contents/Helpers/UsageRingsStatusline"
 codesign --force --sign - "$APP"
 codesign --verify --deep --strict "$APP"
 echo "$APP"

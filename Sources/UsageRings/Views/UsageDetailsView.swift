@@ -31,7 +31,7 @@ struct UsageDetailsView: View {
 
             Divider()
             Toggle("Show AI usage", isOn: $store.isEnabled)
-            Text("Uses your existing Codex, Cursor, and Claude Code sign-ins on this Mac. Refreshes every 5 minutes while Usage Rings is running.")
+            Text("Refreshes every 5 minutes while Usage Rings is running. Claude usage comes from Claude Code activity.")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Text("Grok Bot uses the account signed in to Cursor on this Mac.")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -82,11 +82,11 @@ struct UsageDetailsView: View {
             switch usage.service {
             case .codex: return "Sign in to Codex, then refresh."
             case .cursor: return "Open Cursor and sign in, then refresh."
-            case .claude: return "Claude session file is missing or expired."
+            case .claude: return "Use Claude Code, then refresh to receive usage."
             case .grokBot: return "Sign in to Cursor with your Grok Bot account, then refresh."
             }
         case .unavailable: return "Could not update. Try refreshing in a moment."
-        case .ready: return "Waiting for a fresh reading."
+        case .ready: return usage.service == .claude ? "Use Claude Code to update your usage." : "Waiting for a fresh reading."
         }
     }
 }

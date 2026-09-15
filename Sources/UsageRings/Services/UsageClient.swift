@@ -27,10 +27,7 @@ enum UsageClient {
                 value.setValue("https://cursor.com", forHTTPHeaderField: "Origin")
                 request = value
             case .claude:
-                var value = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/usage")!)
-                value.setValue("Bearer \(try UsageCredentialReader.claude())", forHTTPHeaderField: "Authorization")
-                value.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
-                request = value
+                return ClaudeStatuslineFile.read()?.usage ?? ServiceUsage(service: .claude, state: .signInRequired)
             case .grokBot:
                 var value = URLRequest(url: URL(string: "https://api2.cursor.sh/aiserver.v1.DashboardService/GetSandUsageStatus")!)
                 value.httpMethod = "POST"
@@ -44,7 +41,7 @@ enum UsageClient {
             switch service {
             case .codex: return try UsageResponseParser.codex(data)
             case .cursor: return try UsageResponseParser.cursor(data)
-            case .claude: return try UsageResponseParser.claude(data)
+            case .claude: throw UsageReadError.invalidResponse
             case .grokBot: return try UsageResponseParser.grokBot(data)
             }
         } catch UsageReadError.missingSession, UsageReadError.expiredSession {

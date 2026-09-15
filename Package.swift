@@ -6,11 +6,13 @@ let package = Package(
     platforms: [.macOS("26.0")],
     products: [
         .executable(name: "UsageRings", targets: ["UsageRings"]),
+        .executable(name: "UsageRingsStatusline", targets: ["UsageRingsStatusline"]),
         .executable(name: "UsageRingsWidget", targets: ["UsageRingsWidget"])
     ],
     targets: [
         .target(name: "UsageCore", resources: [.copy("Resources")]),
         .executableTarget(name: "UsageRings", dependencies: ["UsageCore"]),
+        .executableTarget(name: "UsageRingsStatusline", dependencies: ["UsageCore"]),
         .executableTarget(
             name: "UsageRingsWidget", dependencies: ["UsageCore"],
             swiftSettings: [.unsafeFlags(["-application-extension"])],

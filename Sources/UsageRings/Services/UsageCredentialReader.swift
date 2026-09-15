@@ -8,25 +8,6 @@ enum UsageCredentialReader {
         let accountID: String?
     }
 
-    static func claude(home: URL = FileManager.default.homeDirectoryForCurrentUser) throws -> String {
-        let file = home.appendingPathComponent(".claude/.credentials.json")
-        // Polling only reads the session file: a Keychain fallback can show UI.
-        guard let data = try? Data(contentsOf: file) else { throw UsageReadError.missingSession }
-        return try claudeToken(data, now: Date())
-    }
-
-    static func claudeToken(_ data: Data, now: Date) throws -> String {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let oauth = json["claudeAiOauth"] as? [String: Any],
-              let token = oauth["accessToken"] as? String, !token.isEmpty,
-              let expiresAt = oauth["expiresAt"] as? Double,
-              let scopes = oauth["scopes"] as? [String], scopes.contains("user:profile") else {
-            throw UsageReadError.missingSession
-        }
-        guard expiresAt / 1000 > now.timeIntervalSince1970 + 60 else { throw UsageReadError.expiredSession }
-        return token
-    }
-
     static func codex(home: URL = FileManager.default.homeDirectoryForCurrentUser) throws -> CodexSession {
         let location = home.appendingPathComponent(".codex/auth.json")
         guard let data = try? Data(contentsOf: location),

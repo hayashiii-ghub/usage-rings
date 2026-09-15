@@ -35,42 +35,6 @@ struct UsageResponseTests {
         #expect(usage.headline?.remainingPercent == 99.64)
     }
 
-    @Test func claudeUsesMainLimitsWithoutTreatingModelOrSpendLimitsAsTheWholeAccount() throws {
-        let data = Data(#"{"five_hour":{"utilization":12,"resets_at":"2027-02-01T12:00:00Z"},"seven_day":{"utilization":43},"seven_day_opus":{"utilization":99},"seven_day_sonnet":null,"extra_usage":{"is_enabled":true,"used_credits":1000},"limits":[]}"#.utf8)
-        let usage = try UsageResponseParser.claude(data, now: now)
-        #expect(usage.headline?.id == "seven_day")
-        #expect(usage.remainingPercent(at: now) == 57)
-        #expect(usage.windows.count == 3)
-        #expect(usage.windows.first?.resetsAt != nil)
-    }
-
-    @Test func claudeMissingSessionWindowFallsBackToWeekAndRejectsMissingMainLimits() throws {
-        let data = Data(#"{"five_hour":{"utilization":null},"seven_day":{"utilization":0.5}}"#.utf8)
-        #expect(try UsageResponseParser.claude(data, now: now).remainingPercent(at: now) == 99.5)
-        for invalid in [#"{"seven_day_opus":{"utilization":20}}"#,
-                        #"{"five_hour":{"utilization":-1}}"#,
-                        #"{"five_hour":{"utilization":10,"resets_at":"invalid"}}"#] {
-            #expect(throws: (any Error).self) { try UsageResponseParser.claude(Data(invalid.utf8)) }
-        }
-    }
-
-    @Test func claudeSessionRequiresFreshProfileScopeAndNeverUsesRefreshToken() throws {
-        func credentials(expiry: Double, scopes: [String]) throws -> Data {
-            try JSONSerialization.data(withJSONObject: ["claudeAiOauth": [
-                "accessToken": "test-access", "refreshToken": "test-refresh",
-                "expiresAt": expiry * 1000, "scopes": scopes
-            ]])
-        }
-        #expect(try UsageCredentialReader.claudeToken(credentials(expiry: now.timeIntervalSince1970 + 600, scopes: ["user:profile"]), now: now) == "test-access")
-        #expect(throws: (any Error).self) {
-            try UsageCredentialReader.claudeToken(credentials(expiry: now.timeIntervalSince1970 - 1, scopes: ["user:profile"]), now: now)
-        }
-        #expect(throws: (any Error).self) {
-            try UsageCredentialReader.claudeToken(credentials(expiry: now.timeIntervalSince1970 + 600, scopes: ["user:inference"]), now: now)
-        }
-        #expect(throws: (any Error).self) { try UsageCredentialReader.claudeToken(Data(#"{"mcpOAuth":{}}"#.utf8), now: now) }
-    }
-
     @Test func missingPercentageDoesNotBecomeAFullRing() {
         let data = Data(#"{"individualUsage":{"plan":{"used":0,"limit":2000}}}"#.utf8)
         #expect(throws: (any Error).self) { try UsageResponseParser.cursor(data) }
