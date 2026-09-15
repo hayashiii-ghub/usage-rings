@@ -1,8 +1,6 @@
 import UsageCore
 import Foundation
 import SQLite3
-import Security
-import LocalAuthentication
 
 enum UsageCredentialReader {
     struct CodexSession {
@@ -12,22 +10,8 @@ enum UsageCredentialReader {
 
     static func claude(home: URL = FileManager.default.homeDirectoryForCurrentUser) throws -> String {
         let file = home.appendingPathComponent(".claude/.credentials.json")
-        if let data = try? Data(contentsOf: file), let token = try? claudeToken(data, now: Date()) {
-            return token
-        }
-        // Background polling must never open a Keychain permission dialog.
-        let context = LAContext()
-        context.interactionNotAllowed = true
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "Claude Code-credentials",
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-            kSecUseAuthenticationContext as String: context
-        ]
-        var item: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
-              let data = item as? Data else { throw UsageReadError.missingSession }
+        // Polling only reads the session file: a Keychain fallback can show UI.
+        guard let data = try? Data(contentsOf: file) else { throw UsageReadError.missingSession }
         return try claudeToken(data, now: Date())
     }
 

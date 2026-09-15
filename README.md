@@ -24,13 +24,15 @@ turn off **Show AI usage** to stop polling.
 | --- | --- | --- |
 | Codex | `~/.codex/auth.json` | Lowest remaining main window |
 | Cursor | Cursor desktop session | Reported monthly plan percentage |
-| Claude | Claude Code credentials file or existing Keychain item | Lowest remaining 5-hour / weekly window |
+| Claude | `~/.claude/.credentials.json` | Lowest remaining 5-hour / weekly window |
 | Grok Bot | Same Cursor desktop account used by Grok Bot | Weekly allowance |
 
 These are personal integrations using internal endpoints, so provider changes may
 require updates. API-key billing accounts and pooled Grok Bot enterprise quotas are
-not supported. Claude Code Keychain access is noninteractive; an unreadable or expired
-session is shown as requiring sign-in. No token refresh or account changes are made.
+not supported. Claude currently reads only its credentials file. Missing or expired
+files display unavailable; automatic refresh never falls back to Keychain access or
+opens a password dialog. Keychain-only Claude sessions are not currently supported.
+No token refresh or account changes are made.
 
 Login credentials stay out of the repository, logs, and widget data. The host contacts
 only the matching provider endpoints. The sandboxed widget reads sanitized values

@@ -82,7 +82,7 @@ struct UsageDetailsView: View {
             switch usage.service {
             case .codex: return "Sign in to Codex, then refresh."
             case .cursor: return "Open Cursor and sign in, then refresh."
-            case .claude: return "Sign in to Claude Code, then refresh."
+            case .claude: return "Claude session file is missing or expired."
             case .grokBot: return "Sign in to Cursor with your Grok Bot account, then refresh."
             }
         case .unavailable: return "Could not update. Try refreshing in a moment."
