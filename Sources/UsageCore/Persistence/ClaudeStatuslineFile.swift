@@ -1,46 +1,5 @@
-import CryptoKit
 import Darwin
 import Foundation
-
-public struct ClaudeStatuslineInput: Sendable {
-    public let usage: ServiceUsage
-    public let responseMarker: String
-}
-
-public enum ClaudeStatusline {
-    public static func parse(_ data: Data, now: Date = Date()) throws -> ClaudeStatuslineInput? {
-        let input = try JSONDecoder().decode(Input.self, from: data)
-        guard let limits = input.rate_limits, let session = input.session_id, !session.isEmpty,
-              let duration = input.cost?.total_api_duration_ms, duration.isFinite, duration > 0 else { return nil }
-        var windows: [UsageWindow] = []
-        for (id, title, window) in [("five_hour", "5 hours", limits.five_hour), ("seven_day", "Week", limits.seven_day)] {
-            guard let window else { continue }
-            guard window.used_percentage.isFinite, (0...100).contains(window.used_percentage),
-                  window.resets_at.isFinite, window.resets_at > 0 else { throw UsageReadError.invalidResponse }
-            let reset = Date(timeIntervalSince1970: window.resets_at)
-            guard reset > now else { continue }
-            windows.append(UsageWindow(id: id, title: title, usedPercent: window.used_percentage, resetsAt: reset))
-        }
-        guard !windows.isEmpty else { return nil }
-        // Status lines also run for UI events. Only new API activity renews freshness.
-        // Hash the session marker so no session ID or workspace metadata is stored.
-        let marker = SHA256.hash(data: Data("\(session):\(duration)".utf8))
-            .map { String(format: "%02x", $0) }.joined()
-        return ClaudeStatuslineInput(
-            usage: ServiceUsage(service: .claude, state: .ready, windows: windows, updatedAt: now),
-            responseMarker: marker
-        )
-    }
-
-    private struct Input: Decodable {
-        let session_id: String?
-        let cost: Cost?
-        let rate_limits: Limits?
-    }
-    private struct Cost: Decodable { let total_api_duration_ms: Double? }
-    private struct Limits: Decodable { let five_hour: Window?; let seven_day: Window? }
-    private struct Window: Decodable { let used_percentage: Double; let resets_at: Double }
-}
 
 public struct ClaudeStatuslineCache: Codable, Equatable, Sendable {
     public var usage: ServiceUsage

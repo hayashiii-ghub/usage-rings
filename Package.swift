@@ -13,6 +13,7 @@ let package = Package(
         .target(name: "UsageCore", resources: [.copy("Resources")]),
         .executableTarget(name: "UsageRings", dependencies: ["UsageCore"]),
         .executableTarget(name: "UsageRingsStatusline", dependencies: ["UsageCore"]),
+        .executableTarget(name: "WidgetPreview", dependencies: ["UsageCore"], path: "Tools/WidgetPreview"),
         .executableTarget(
             name: "UsageRingsWidget", dependencies: ["UsageCore"],
             swiftSettings: [.unsafeFlags(["-application-extension"])],
