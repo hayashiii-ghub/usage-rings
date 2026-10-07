@@ -58,6 +58,11 @@ macOS controls widget updates. Missing/failed readings, values older than 20 min
 and passed reset times display **—** until a new reading arrives. Extra spending
 allowances are not substituted for included quota percentages.
 
+The small widget uses a 2 × 2 grid of rings without percentage labels; VoiceOver
+still reads each provider's remaining percentage. Missing or expired readings
+show a **—** badge on the small ring. The medium widget keeps percentages below
+the rings.
+
 ## Development
 
 ```sh
@@ -65,6 +70,7 @@ make check   # parser, credential, snapshot, and bridge tests
 make build   # build and verify signed app + widget bundles
 make run     # run from dist without installing
 swift run WidgetPreview dist/widget-preview.png # synthetic small/medium, light/dark fixture sheet
+swift run WidgetPreview dist/widget-comparison.png dist/widget-before.png # compare with a saved baseline
 ```
 
 `WidgetPreview` renders the production SwiftUI rings without starting the app,

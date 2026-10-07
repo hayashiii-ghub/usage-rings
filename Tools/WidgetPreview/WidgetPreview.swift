@@ -9,8 +9,17 @@ struct WidgetPreview {
         let output = URL(fileURLWithPath: CommandLine.arguments.dropFirst().first ?? "dist/widget-preview.png")
         let renderer = ImageRenderer(content: PreviewSheet())
         renderer.scale = 2
-        guard let image = renderer.cgImage else {
+        guard var image = renderer.cgImage else {
             throw NSError(domain: "WidgetPreview", code: 1, userInfo: [NSLocalizedDescriptionKey: "SwiftUI rendering failed"])
+        }
+        if CommandLine.arguments.count > 2 {
+            guard let before = NSImage(contentsOfFile: CommandLine.arguments[2]) else {
+                throw NSError(domain: "WidgetPreview", code: 3, userInfo: [NSLocalizedDescriptionKey: "Cannot read baseline image"])
+            }
+            let comparison = ImageRenderer(content: ComparisonSheet(before: before, after: NSImage(cgImage: image, size: .zero)))
+            comparison.scale = 2
+            guard let result = comparison.cgImage else { throw NSError(domain: "WidgetPreview", code: 4) }
+            image = result
         }
         let bitmap = NSBitmapImageRep(cgImage: image)
         guard let data = bitmap.representation(using: .png, properties: [:]) else {
@@ -19,6 +28,33 @@ struct WidgetPreview {
         try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
         try data.write(to: output)
         print(output.path)
+    }
+}
+
+private struct ComparisonSheet: View {
+    let before: NSImage
+    let after: NSImage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Usage Rings · Before / After").font(.title.bold())
+            Text("Production SwiftUI views · synthetic fixtures · desktop compositing is not simulated")
+                .font(.subheadline)
+            HStack(alignment: .top, spacing: 24) {
+                panel(before, title: "Before")
+                panel(after, title: "After")
+            }
+        }
+        .padding(24)
+        .background(.background)
+        .environment(\.colorScheme, .light)
+    }
+
+    private func panel(_ image: NSImage, title: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.headline)
+            Image(nsImage: image).resizable().scaledToFit().frame(width: 880)
+        }
     }
 }
 
