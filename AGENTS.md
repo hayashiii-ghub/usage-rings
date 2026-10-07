@@ -8,7 +8,9 @@ Keep initial GitHub releases as drafts; public publishing requires explicit appr
 - `Sources/UsageCore`: shared models, parsers, ring views and icons.
 - `Sources/UsageRingsWidget`: WidgetKit extension and sanitized snapshot cache.
 - Validation: `make check`, then `make build` for embedded bundle/signing checks.
-- Distribution: `make package-draft` for explicitly unnotarized review artifacts;
-  `make package` requires Developer ID signatures, hardened runtime, and notarization.
+- Distribution: `make package-unnotarized` for explicitly unnotarized DMG/ZIP releases;
+  `make package-draft` for review ZIPs. Optional `make package` requires Developer ID
+  signatures, hardened runtime, and notarization. Never remove quarantine or disable
+  system security in installation scripts.
 - Installation/update for this Mac: `make install`.
 - Never log, commit, or copy login credentials into the project or widget.

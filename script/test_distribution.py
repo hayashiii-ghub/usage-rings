@@ -92,49 +92,62 @@ class PackageTests(unittest.TestCase):
                         "CodeDirectory flags=0x10000(runtime)\nTimestamp=Oct 7, 2026\nTeamIdentifier=TESTTEAM01\n")
 
     def test_draft_reports_unnotarized_and_actual_architecture(self):
-        manifest = distribution.inspect_bundle(self.app, True)
+        manifest = distribution.inspect_bundle(self.app, "draft-unnotarized")
         self.assertEqual(manifest["distribution"], "draft-unnotarized")
         self.assertEqual(manifest["architectures"], ["arm64"])
         self.assertTrue(all(item["type"] == "ad-hoc" for item in manifest["signatures"].values()))
         self.assertFalse(any("stapler" in call.args or "--assess" in call.args for call in self.mock.call_args_list))
 
-    def test_public_packaging_rejects_ad_hoc(self):
-        with self.assertRaisesRegex(ValueError, "Developer ID"):
-            distribution.inspect_bundle(self.app, False)
+    def test_explicit_unnotarized_mode_preserves_integrity_checks(self):
+        manifest = distribution.inspect_bundle(self.app, "unnotarized")
+        self.assertEqual(manifest["distribution"], "unnotarized")
+        self.assertEqual(manifest["notarization"], "not-verified")
+        self.assertTrue(all(item["type"] == "ad-hoc" for item in manifest["signatures"].values()))
+        self.failed_command = "--verify"
+        with self.assertRaisesRegex(ValueError, "trust check"):
+            distribution.inspect_bundle(self.app, "unnotarized")
 
-    def test_public_packaging_requires_runtime_timestamp_ticket_and_gatekeeper(self):
+    def test_rejects_unknown_distribution_mode(self):
+        with self.assertRaisesRegex(ValueError, "Unknown distribution mode"):
+            distribution.inspect_bundle(self.app, "automatic")
+
+    def test_notarized_packaging_rejects_ad_hoc(self):
+        with self.assertRaisesRegex(ValueError, "Developer ID"):
+            distribution.inspect_bundle(self.app, "notarized")
+
+    def test_notarized_packaging_requires_runtime_timestamp_ticket_and_gatekeeper(self):
         self.developer_id()
         for missing in ("(runtime)", "Timestamp=Oct 7, 2026"):
             original = self.details
             self.details = original.replace(missing, "")
             with self.subTest(missing=missing), self.assertRaisesRegex(ValueError, "Developer ID"):
-                distribution.inspect_bundle(self.app, False)
+                distribution.inspect_bundle(self.app, "notarized")
             self.details = original
         for failed in ("stapler", "--assess"):
             self.failed_command = failed
             with self.subTest(failed=failed), self.assertRaisesRegex(ValueError, "trust check"):
-                distribution.inspect_bundle(self.app, False)
+                distribution.inspect_bundle(self.app, "notarized")
         self.failed_command = None
-        self.assertEqual(distribution.inspect_bundle(self.app, False)["distribution"], "notarized")
+        self.assertEqual(distribution.inspect_bundle(self.app, "notarized")["distribution"], "notarized")
 
     def test_rejects_different_cpu_or_debugging_entitlements(self):
         self.architecture_override = "x86_64"
         with self.assertRaisesRegex(ValueError, "architectures differ"):
-            distribution.inspect_bundle(self.app, True)
+            distribution.inspect_bundle(self.app, "draft-unnotarized")
         self.architecture_override = None
         self.debug_entitlement = True
         with self.assertRaisesRegex(ValueError, "Debugging entitlement"):
-            distribution.inspect_bundle(self.app, True)
+            distribution.inspect_bundle(self.app, "draft-unnotarized")
 
-    def test_public_packaging_rejects_a_mixed_team_or_unsigned_nested_component(self):
+    def test_notarized_packaging_rejects_a_mixed_team_or_unsigned_nested_component(self):
         self.developer_id()
         helper = str(self.app / "Contents/Helpers/UsageRingsStatusline")
         self.details_overrides[helper] = "Signature=adhoc\n"
         with self.assertRaisesRegex(ValueError, "Developer ID"):
-            distribution.inspect_bundle(self.app, False)
+            distribution.inspect_bundle(self.app, "notarized")
         self.details_overrides[helper] = self.details.replace("TESTTEAM01", "OTHERTEAM1")
         with self.assertRaisesRegex(ValueError, "same developer team"):
-            distribution.inspect_bundle(self.app, False)
+            distribution.inspect_bundle(self.app, "notarized")
 
     def test_rejects_mismatched_metadata_dirty_source_and_debug_builds(self):
         for key, value in (("CFBundleVersion", "3"), ("UsageRingsSourceRevision", "b" * 40)):

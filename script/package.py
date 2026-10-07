@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Archive only a verified app; public artifacts additionally need notarization."""
+"""Package verified macOS bundles with an explicit notarized or unnotarized mode."""
 import argparse
 import hashlib
 import json
@@ -51,7 +51,10 @@ def read_metadata(app):
     return host, widget
 
 
-def inspect_bundle(app, draft):
+def inspect_bundle(app, mode):
+    if mode not in ("notarized", "unnotarized", "draft-unnotarized"):
+        raise ValueError("Unknown distribution mode.")
+    require_notarization = mode == "notarized"
     metadata, widget = read_metadata(app)
     components = {
         "app": (app, app / "Contents/MacOS/UsageRings"),
@@ -90,16 +93,16 @@ def inspect_bundle(app, draft):
         if name == "widget" and (entitlements.get("com.apple.security.app-sandbox") is not True or
                                  entitlements.get("com.apple.security.network.client") is not True):
             raise ValueError("Widget sandbox/network entitlements are missing.")
-        if not draft:
+        if require_notarization:
             if not developer_id or not signature["hardened_runtime"] or not signature["secure_timestamp"]:
-                raise ValueError("Public packaging requires Developer ID, hardened runtime, and secure timestamps on all code. Use --draft for unnotarized review artifacts.")
+                raise ValueError("Notarized packaging requires Developer ID, hardened runtime, and secure timestamps on all code. Select --unnotarized explicitly for an unnotarized release.")
             run("/usr/bin/codesign", "--verify", "--strict", "-R",
                 "anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.13] exists", str(code))
             team = re.search(r"^TeamIdentifier=([A-Z0-9]+)$", details, re.MULTILINE)
             if not team:
                 raise ValueError(f"Developer team identifier missing: {name}")
             teams.add(team.group(1))
-    if not draft:
+    if require_notarization:
         if len(teams) != 1:
             raise ValueError("All code must be signed by the same developer team.")
         run("/usr/bin/xcrun", "stapler", "validate", str(app))
@@ -113,45 +116,109 @@ def inspect_bundle(app, draft):
         "minimum_macos": metadata["LSMinimumSystemVersion"],
         "architectures": architecture,
         "signatures": signatures,
-        "notarization": "not-verified-draft" if draft else "stapled-and-gatekeeper-accepted",
-        "distribution": "draft-unnotarized" if draft else "notarized",
+        "notarization": "stapled-and-gatekeeper-accepted" if require_notarization else "not-verified",
+        "distribution": mode,
     }
 
 
-def package(app, output, draft):
+def create_disk_image(app, staging, destination, mode):
+    metadata = inspect_bundle(app, mode)
+    architecture = ", ".join(metadata["architectures"])
+    contents = staging / "dmg-contents"
+    contents.mkdir()
+    run("/usr/bin/ditto", str(app), str(contents / "Usage Rings.app"))
+    (contents / "Applications").symlink_to("/Applications")
+    (contents / "INSTALL.txt").write_text(
+        f"Usage Rings — macOS 26+, {architecture}\n\n"
+        "Quit an existing copy, then drag Usage Rings.app to Applications.\n"
+        "Open the installed app and add Usage Rings > AI Usage using Edit Widgets.\n"
+        "Keep the app running to refresh usage. Xcode is not needed.\n\n"
+        "This release is not notarized by Apple.\n"
+        "macOS may block the first launch. If you trust this source, see Apple's\n"
+        "per-app approval instructions: https://support.apple.com/102445\n"
+        "Do not disable Gatekeeper or remove quarantine attributes.\n\n"
+        "Claude Code status-line setup is optional and is not run automatically.\n"
+        "Instructions: https://github.com/hayashiii-ghub/usage-rings#accounts\n",
+        encoding="utf-8",
+    )
+    run("/usr/bin/hdiutil", "create", "-volname", "Usage Rings", "-srcfolder",
+        str(contents), "-fs", "HFS+", "-format", "UDZO", str(destination))
+    run("/usr/bin/hdiutil", "verify", str(destination))
+    mount = staging / "dmg-mount"
+    mount.mkdir()
+    run("/usr/bin/hdiutil", "attach", "-readonly", "-nobrowse", "-noautoopen",
+        "-mountpoint", str(mount), str(destination))
+    try:
+        shortcut = mount / "Applications"
+        if not shortcut.is_symlink() or shortcut.readlink() != Path("/Applications"):
+            raise ValueError("Disk image Applications shortcut is missing or incorrect.")
+        if inspect_bundle(mount / "Usage Rings.app", mode) != inspect_bundle(app, mode):
+            raise ValueError("Disk image changed bundle metadata or signing state.")
+    finally:
+        run("/usr/bin/hdiutil", "detach", str(mount))
+
+
+def package(app, output, mode):
     output.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".package-", dir=output) as temporary:
         staging = Path(temporary)
         staged_app = staging / "Usage Rings.app"
         run("/usr/bin/ditto", str(app), str(staged_app))
-        manifest = inspect_bundle(staged_app, draft)
+        manifest = inspect_bundle(staged_app, mode)
         architecture = "universal" if len(manifest["architectures"]) == 2 else manifest["architectures"][0]
         name = (f"Usage-Rings-{manifest['version']}-build{manifest['build']}-"
                 f"{manifest['source_revision'][:12]}-macOS-{architecture}-{manifest['distribution']}")
-        files = [name + suffix for suffix in (".zip", ".json", ".sha256")]
-        if any((output / file).exists() for file in files):
+        # Stable asset names support GitHub's releases/latest/download URLs. A
+        # versioned local directory keeps previous build artifacts intact.
+        destination = output / name if mode == "unnotarized" else output
+        basename = "usage-rings-macos" if mode == "unnotarized" else name
+        files = [basename + suffix for suffix in (".zip", ".json", ".sha256")]
+        if mode == "unnotarized":
+            files.append(basename + ".dmg")
+        if (mode == "unnotarized" and destination.exists()) or any((destination / file).exists() for file in files):
             raise ValueError("An artifact with this version/build/revision already exists; use a new build number or remove the old local artifact deliberately.")
         archive = staging / files[0]
         run("/usr/bin/ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(staged_app), str(archive))
         extracted = staging / "roundtrip"
         run("/usr/bin/ditto", "-x", "-k", str(archive), str(extracted))
-        if inspect_bundle(extracted / "Usage Rings.app", draft) != manifest:
+        if inspect_bundle(extracted / "Usage Rings.app", mode) != manifest:
             raise ValueError("Archive round-trip changed bundle metadata or signing state.")
         digest = hashlib.sha256(archive.read_bytes()).hexdigest()
         manifest.update({"archive": files[0], "sha256": digest})
+        checksums = [f"{digest}  {files[0]}"]
+        if mode == "unnotarized":
+            disk_image = staging / files[3]
+            create_disk_image(staged_app, staging, disk_image, mode)
+            image_digest = hashlib.sha256(disk_image.read_bytes()).hexdigest()
+            manifest.update({"disk_image": files[3], "disk_image_sha256": image_digest})
+            checksums.append(f"{image_digest}  {files[3]}")
         (staging / files[1]).write_text(json.dumps(manifest, indent=2) + "\n")
-        (staging / files[2]).write_text(f"{digest}  {files[0]}\n")
+        manifest_digest = hashlib.sha256((staging / files[1]).read_bytes()).hexdigest()
+        checksums.append(f"{manifest_digest}  {files[1]}")
+        (staging / files[2]).write_text("\n".join(checksums) + "\n")
+        ready = staging / "ready"
+        ready.mkdir()
         for file in files:
-            (staging / file).replace(output / file)
-        return output / files[0]
+            (staging / file).replace(ready / file)
+        if mode == "unnotarized":
+            ready.replace(destination)
+        else:
+            for file in files:
+                (ready / file).replace(destination / file)
+        return destination / (files[3] if mode == "unnotarized" else files[0])
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--draft", action="store_true", help="Create an explicitly unnotarized review artifact; never publish as a notarized release.")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--draft", action="store_true", help="Create an unnotarized review ZIP.")
+    modes.add_argument("--unnotarized", action="store_true", help="Create an explicitly unnotarized DMG and ZIP for distribution.")
+    parser.add_argument("--app", type=Path, default=ROOT / "dist/Usage Rings.app")
+    parser.add_argument("--output", type=Path, default=ROOT / "dist/packages")
     args = parser.parse_args()
     try:
-        archive = package(ROOT / "dist/Usage Rings.app", ROOT / "dist/packages", args.draft)
+        mode = "draft-unnotarized" if args.draft else "unnotarized" if args.unnotarized else "notarized"
+        archive = package(args.app.resolve(), args.output.resolve(), mode)
     except (ValueError, OSError, plistlib.InvalidFileException) as error:
         parser.exit(1, f"Packaging: {error}\n")
     print(archive)

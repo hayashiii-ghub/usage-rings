@@ -1,121 +1,107 @@
 # Distribution
 
-Usage Rings requires macOS 26+. The current local build produces Apple silicon
-(`arm64`) code; packaging reads all three binaries and labels the actual architecture.
-Intel or universal support needs a separate build and device verification.
+Usage Rings uses the same download flow as Context: a GitHub Release DMG, then
+drag the app into Applications. The app is **not notarized by Apple**. Paid
+Apple Developer membership is not part of this distribution plan.
 
-## Distribution without paid Apple Developer membership
+## Install a release
 
-The default installation route is to build the published source locally using
-macOS 26+ and Xcode, following [Install or update](README.md#install-or-update).
-Paid Apple Developer membership is not required. `make install` installs and
-opens the app and connects Claude Code's status line when no custom command
-exists; the README explains that behavior. To inspect a build first without
-installing or connecting the helper, use `make check` followed by `make build`.
+Requires macOS 26+ and **Apple silicon (arm64)**. The current app does not support
+Intel Macs. Xcode is needed only when building from source, not for the downloads.
 
-An unnotarized ZIP is a separate preview option. Developer ID signing and Apple
-notarization are optional future distribution work, not remaining requirements
-for the source installation route.
+1. Download [usage-rings-macos.dmg](https://github.com/hayashiii-ghub/usage-rings/releases/latest/download/usage-rings-macos.dmg)
+   from [GitHub Releases](https://github.com/hayashiii-ghub/usage-rings/releases).
+2. Open the DMG. Quit any running Usage Rings and drag `Usage Rings.app` into
+   Applications. When updating, replace the existing app in its current location
+   so there is only one installed copy. If it is already in `~/Applications`,
+   use that location rather than creating a second copy in `/Applications`.
+3. Open the installed app. This is an ad-hoc signed, unnotarized app; macOS may
+   block its first launch. If you trust the source, follow Apple's
+   [per-app approval instructions](https://support.apple.com/102445) in
+   **System Settings → Privacy & Security → Open Anyway**. Managed-device policy
+   may prevent approval. Stop if macOS reports malware or an integrity failure.
+4. Right-click the desktop, choose **Edit Widgets**, and add **Usage Rings → AI
+   Usage**. Keep the host app running to refresh usage. Login Items are optional.
 
-Use `make package-draft` to prepare this artifact. Keep the `draft-unnotarized`
-filename and disclose its ad-hoc signing state; it has no Apple-verified developer
-identity or notarization. GitHub draft status is separate from signing status:
-the release stays unpublished until an explicit publishing decision.
+A ZIP is also available in the release. Extract it and follow steps 2–4. No
+installer removes quarantine attributes or disables Gatekeeper. Claude Code
+integration is optional; see below before changing an existing custom status line.
 
-Before publishing, verify a downloaded ZIP on another supported Mac, including
-first launch and desktop widget registration. Updating an existing installation
-on the development Mac does not establish that a fresh download works elsewhere.
-Keep the current release a draft until those checks are complete.
+For verification, download `usage-rings-macos.zip`, `usage-rings-macos.dmg`,
+`usage-rings-macos.json`, and `usage-rings-macos.sha256` from the same release,
+then run `shasum -a 256 -c usage-rings-macos.sha256` in that directory. The JSON
+records version, build, source commit, architecture, signing state and hashes.
+Neither archive includes account credentials, settings, or usage caches.
 
-Recipients should verify the checksum and extract the app as described below.
-If macOS blocks opening it because the developer cannot be verified, Apple's
-[instructions for opening an app from an unknown developer](https://support.apple.com/guide/mac-help/mh40616/mac)
-describe the per-app **Open Anyway** option in **System Settings → Privacy &
-Security**. The recipient should use that option only after deciding they trust
-this source. It may not be available under managed-device policies, and it does
-not guarantee the widget will register. Do not use it for a malware warning or
-a failed integrity check; stop and investigate those failures. Do not disable
-Gatekeeper globally or remove quarantine attributes. Building from reviewed
-source is an alternative for users with the required local development tools.
+The development Mac has confirmed the updated app and small widget. Fresh
+installation, first-launch approval, and widget registration on a separate Mac
+remain untested; publishing an unnotarized build does not imply those were tested.
 
-## Prepare a review artifact
+## Build and package an unnotarized release
 
-Start from a clean committed checkout and run the required checks before building:
+From a clean committed checkout with macOS 26+ and Xcode:
 
 ```sh
 make check
-APP_VERSION=0.1.1 APP_BUILD=2 make build
-make package-draft
+APP_VERSION=0.1.1 APP_BUILD=3 make build
+make package-unnotarized
 ```
+
+This explicitly selects unnotarized distribution and creates a versioned folder
+under `dist/packages/` with four assets:
+
+- `usage-rings-macos.dmg`: compressed disk image with the app, Applications shortcut,
+  and installation notes.
+- `usage-rings-macos.zip`: the same app bundle.
+- `usage-rings-macos.json`: build and signing metadata plus archive hashes.
+- `usage-rings-macos.sha256`: checksums for the DMG, ZIP, and JSON.
+
+Stable asset names support GitHub's `releases/latest/download` links; the local
+versioned directory preserves earlier builds. Packaging rejects dirty-source or
+debug builds, mismatched host/widget metadata, broken signatures, and invalid
+entitlements. It extracts the ZIP and mounts the DMG read-only to recheck their
+contents, then detaches it. It does not install or launch the app.
+
+The mode never calls notarization or changes system security settings. Ad-hoc
+signing checks bundle integrity but does not verify a developer's identity.
+`make package-draft` remains available for a review-only ZIP. Release draft status
+is independent of code signing: public publishing is an explicit release step.
 
 `APP_VERSION` is three numeric components; `APP_BUILD` is an increasing integer
-from 1 to 9999. Local `make build` keeps its previous defaults (0.1.0, build 1,
-release, ad-hoc signing). Set `SOURCE_REVISION` only to the full checked-out HEAD
-hash; it defaults to HEAD. Both the app and widget record version, build, source
-commit, source cleanliness, and configuration before signing. Packaging rejects
-dirty source metadata, debug builds, mismatched components, or broken signatures.
+from 1 to 9999. Ordinary local builds retain their original defaults (0.1.0,
+build 1). `SOURCE_REVISION` defaults to the full checked-out HEAD and cannot refer
+to a different commit. The host and widget record the same version and build.
 
-`dist/packages/` receives a ZIP, JSON manifest, and `.sha256` file. Their names
-include version, build, source revision, architecture, and `draft-unnotarized`.
-Only the app bundle goes into the ZIP; no settings, accounts, caches, or source
-checkout are added. The ZIP is unpacked and verified before the files are emitted.
-The manifest records the actual signing state of the app, widget, and helper.
+## Build from source instead
 
-These draft artifacts are initially for review. An ad-hoc signature provides bundle
-integrity but no verified developer identity or notarization. A downloaded copy
-may be rejected by Gatekeeper. Keep any initial GitHub Release a **draft** and
-explicitly label its assets unnotarized. Do not present it as ready for public
-installation or ask recipients to disable Gatekeeper or remove quarantine.
+Clone the repository and run `make check`, then `make install`. This requires
+Xcode but no paid Apple Developer membership. The source installer installs to
+`~/Applications` and connects Claude Code's status line if no custom command
+exists; custom commands are preserved. Use `make build` to inspect the bundle
+without installing it or connecting the helper.
 
-## Optional: prepare a notarized public artifact
+## Optional notarized build
 
-This path requires an already installed **Developer ID Application** certificate
-and private key, and already configured notarization access. Certificate issuance,
-Developer Program enrollment, and credential setup are separate authorized steps.
-No certificate or credentials are included in this repository.
-
-Read the installed identity hashes with `security find-identity -p codesigning -v`.
-Use the SHA-1 hash of the intended Developer ID Application identity:
+This is not part of the current release plan. With an already installed Developer
+ID Application certificate and configured notarization access, build using its
+identity hash, submit to Apple, and staple an accepted ticket:
 
 ```sh
-APP_VERSION=0.1.1 APP_BUILD=3 CODE_SIGN_IDENTITY='<installed-identity-SHA1>' make build
+APP_VERSION=0.1.1 APP_BUILD=4 CODE_SIGN_IDENTITY='<installed-identity-SHA1>' make build
 ditto -c -k --sequesterRsrc --keepParent 'dist/Usage Rings.app' dist/notary-upload.zip
 xcrun notarytool submit dist/notary-upload.zip --keychain-profile '<existing-profile>' --wait
-```
-
-The build signs the widget, helper, then app with the same identity, hardened
-runtime, and secure timestamps. It preserves the widget's sandbox/network-client
-entitlements and does not grant debugging or sandbox exceptions to the host.
-It does not fall back to ad-hoc signing if Developer ID signing fails.
-
-Continue only after `notarytool` reports **Accepted**. If it fails, inspect the
-submission log with `xcrun notarytool log '<submission-id>' --keychain-profile
-'<existing-profile>'`; do not ship that artifact. After acceptance:
-
-```sh
+# Continue only after Apple reports Accepted:
 xcrun stapler staple 'dist/Usage Rings.app'
 make package
 ```
 
-`make package` requires valid Developer ID signatures, one matching team across
-all three components, hardened runtime, secure timestamps, a valid stapled
-ticket, and a successful Gatekeeper assessment. It produces a new final ZIP and
-checksum after stapling. The temporary upload ZIP is not the distributable ZIP.
-Run the packaged copy on another supported Mac, including desktop WidgetKit
-registration, provider refresh, and Claude helper integration, before publishing.
-Public publishing requires explicit approval; there is no publishing automation.
+`make package` retains the stricter notarized mode: matching Developer ID teams,
+hardened runtime, secure timestamps, a stapled ticket, and successful Gatekeeper
+assessment. It does not silently fall back to the unnotarized mode. See Apple's
+[Developer ID overview](https://developer.apple.com/developer-id/) and
+[notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).
 
-See Apple's [Developer ID overview](https://developer.apple.com/developer-id/),
-[notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow),
-and [code signing guidance](https://developer.apple.com/library/archive/technotes/tn2206/_index.html).
-
-## Recipient installation of a notarized release
-
-Download the final ZIP and its matching `.sha256` file from the same release. In
-their directory, run `shasum -a 256 -c '<downloaded-file>.sha256'`. Extract the ZIP,
-quit any running Usage Rings, and move `Usage Rings.app` into `~/Applications`.
-Open the app, then add **Usage Rings → AI Usage** through **Edit Widgets** on the
-desktop. Keep the host running so it refreshes usage. Add it to Login Items if desired.
+## Optional Claude Code integration
 
 Moving the app does not connect Claude Code's status line automatically. To opt
 in, merge the following property into `~/.claude/settings.json` (or the configured
@@ -126,12 +112,14 @@ already exists, compose its command with the helper instead of replacing it:
 {
   "statusLine": {
     "type": "command",
-    "command": "\"$HOME/Applications/Usage Rings.app/Contents/Helpers/UsageRingsStatusline\""
+    "command": "\"/Applications/Usage Rings.app/Contents/Helpers/UsageRingsStatusline\""
   }
 }
 ```
 
-The quoted command handles the space in the app's name. Use Claude Code once;
+The quoted command handles the space in the app's name. If the app is installed
+under `~/Applications`, replace `/Applications` with `$HOME/Applications` in that
+command. Use Claude Code once;
 the usage reading appears after an API response. See [README](README.md#accounts)
 for provider availability, cache freshness, and privacy details.
 
@@ -139,4 +127,4 @@ To disconnect this manual setup, remove only the `statusLine` property added
 above. If it was composed with a custom command, remove only the Usage Rings
 helper invocation and keep the custom command. The source installer’s
 `--uninstall` recognizes only the command that installer wrote; it does not
-remove this manual `$HOME` form.
+remove every manually written form.
