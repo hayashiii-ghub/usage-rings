@@ -3,25 +3,6 @@ import Foundation
 import SQLite3
 
 enum UsageCredentialReader {
-    struct CodexSession {
-        let token: String
-        let accountID: String?
-    }
-
-    static func codex(home: URL = FileManager.default.homeDirectoryForCurrentUser) throws -> CodexSession {
-        let location = home.appendingPathComponent(".codex/auth.json")
-        guard let data = try? Data(contentsOf: location),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let tokens = json["tokens"] as? [String: Any],
-              let token = tokens["access_token"] as? String, !token.isEmpty else {
-            throw UsageReadError.missingSession
-        }
-        if let expiry = payload(token)?["exp"] as? Double, expiry <= Date().timeIntervalSince1970 + 60 {
-            throw UsageReadError.expiredSession
-        }
-        return CodexSession(token: token, accountID: tokens["account_id"] as? String)
-    }
-
     static func cursorCookie(home: URL = FileManager.default.homeDirectoryForCurrentUser) throws -> String {
         try cursorCookie(token: cursorToken(home: home), now: Date())
     }

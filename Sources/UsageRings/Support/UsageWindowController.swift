@@ -14,7 +14,10 @@ final class UsageWindowController {
                                   styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
             window.title = "Usage Rings"
             window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: UsageDetailsView(store: store))
+            window.contentView = NSHostingView(rootView: ScrollView {
+                UsageDetailsView(store: store)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+            })
             window.center()
             self.window = window
         }

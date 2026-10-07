@@ -7,7 +7,7 @@ struct UsageResponseTests {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
     @Test func codexWeeklyOnlyPrimaryIsNotCalledFiveHours() throws {
-        let data = Data(#"{"rate_limit":{"primary_window":{"used_percent":54,"limit_window_seconds":604800,"reset_at":1800003600},"secondary_window":null}}"#.utf8)
+        let data = Data(#"{"rateLimits":{"primary":{"usedPercent":54,"windowDurationMins":10080,"resetsAt":1800003600},"secondary":null}}"#.utf8)
         let usage = try UsageResponseParser.codex(data, now: now)
         #expect(usage.windows.count == 1)
         #expect(usage.headline?.title == "Week")
@@ -15,7 +15,7 @@ struct UsageResponseTests {
     }
 
     @Test func codexShowsTheMostConstrainedWindow() throws {
-        let data = Data(#"{"rate_limit":{"primary_window":{"used_percent":10,"limit_window_seconds":18000},"secondary_window":{"used_percent":82,"limit_window_seconds":604800}}}"#.utf8)
+        let data = Data(#"{"rateLimits":{"primary":{"usedPercent":10,"windowDurationMins":300},"secondary":{"usedPercent":82,"windowDurationMins":10080}}}"#.utf8)
         let usage = try UsageResponseParser.codex(data, now: now)
         #expect(usage.headline?.title == "Week")
         #expect(usage.remainingPercent(at: now) == 18)
@@ -38,7 +38,7 @@ struct UsageResponseTests {
     @Test func missingPercentageDoesNotBecomeAFullRing() {
         let data = Data(#"{"individualUsage":{"plan":{"used":0,"limit":2000}}}"#.utf8)
         #expect(throws: (any Error).self) { try UsageResponseParser.cursor(data) }
-        #expect(throws: (any Error).self) { try UsageResponseParser.codex(Data(#"{"rate_limit":{}}"#.utf8)) }
+        #expect(throws: (any Error).self) { try UsageResponseParser.codex(Data(#"{"rateLimits":{}}"#.utf8)) }
     }
 
     @Test func invalidNegativeUsageIsRejected() {
