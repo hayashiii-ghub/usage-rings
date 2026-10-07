@@ -14,8 +14,15 @@ Right-click the desktop, choose **Edit Widgets**, and add **Usage Rings → AI U
 Keep the app running; it refreshes every five minutes and after waking from sleep.
 The menu-bar icon opens details or quits the app.
 Installation also connects Claude Code’s status line to the bundled helper; an existing
-custom status line is preserved and must be composed manually before connecting. There is no automatic updater or
-GitHub Release workflow. To start it after login, add Usage Rings to macOS Login Items.
+custom status line is preserved and must be composed manually before connecting.
+To start it after login, add Usage Rings to macOS Login Items. There is no automatic updater.
+
+## Distribution
+
+See [DISTRIBUTION.md](DISTRIBUTION.md) for versioned ZIPs, checksums, and the
+Developer ID / notarization steps. `make package-draft` prepares an explicitly
+unnotarized review artifact. `make package` requires signatures, a notarization
+ticket, and Gatekeeper acceptance before producing a public distribution artifact.
 
 ## Accounts
 
