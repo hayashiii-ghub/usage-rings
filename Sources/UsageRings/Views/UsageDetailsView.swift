@@ -49,7 +49,7 @@ struct UsageDetailsView: View {
             }
         }
         .padding(24)
-        .frame(width: 460)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var connectionExplanation: some View {
