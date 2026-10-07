@@ -20,10 +20,17 @@ Intel Macs. Xcode is needed only when building from source, not for the download
    [per-app approval instructions](https://support.apple.com/102445) in
    **System Settings → Privacy & Security → Open Anyway**. Managed-device policy
    may prevent approval. Stop if macOS reports malware or an integrity failure.
-4. Right-click the desktop, choose **Edit Widgets**, and add **Usage Rings → AI
+4. Read the connection explanation in Usage Rings and choose **Enable AI usage**
+   to connect. Until then the app does not read provider credentials or contact
+   usage providers. Upgrades from versions that connected automatically also
+   require this action. Codex needs the official Codex CLI 0.160.1+ installed
+   separately and already signed in with ChatGPT; Usage Rings does not install
+   it or start a login flow. The CLI manages its own existing sign-in and local
+   state. See [the accounts guide](README.md#accounts).
+5. Right-click the desktop, choose **Edit Widgets**, and add **Usage Rings → AI
    Usage**. Keep the host app running to refresh usage. Login Items are optional.
 
-A ZIP is also available in the release. Extract it and follow steps 2–4. No
+A ZIP is also available in the release. Extract it and follow steps 2–5. No
 installer removes quarantine attributes or disables Gatekeeper. Claude Code
 integration is optional; see below before changing an existing custom status line.
 
@@ -43,7 +50,7 @@ From a clean committed checkout with macOS 26+ and Xcode:
 
 ```sh
 make check
-APP_VERSION=0.1.1 APP_BUILD=3 make build
+APP_VERSION=0.1.3 APP_BUILD=5 make build
 make package-unnotarized
 ```
 

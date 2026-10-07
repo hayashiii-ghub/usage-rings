@@ -7,20 +7,21 @@ public enum UsageReadError: Error {
 public enum UsageResponseParser {
     public static func codex(_ data: Data, now: Date = Date()) throws -> ServiceUsage {
         let response = try JSONDecoder().decode(CodexResponse.self, from: data)
-        guard let limits = response.rateLimit else { throw UsageReadError.invalidResponse }
-        let pairs = [("primary", limits.primaryWindow), ("secondary", limits.secondaryWindow)]
+        let limits = response.rateLimitsByLimitId?["codex"] ?? response.rateLimits
+        guard limits.limitId == nil || limits.limitId == "codex" else { throw UsageReadError.invalidResponse }
+        let pairs = [("primary", limits.primary), ("secondary", limits.secondary)]
         let windows = try pairs.compactMap { id, raw -> UsageWindow? in
             guard let raw else { return nil }
             let title: String
-            switch raw.limitWindowSeconds {
-            case 18_000: title = "5 hours"
-            case 604_800: title = "Week"
-            case let seconds? where seconds > 0 && seconds % 86_400 == 0: title = "\(seconds / 86_400) days"
-            case let seconds? where seconds > 0 && seconds % 3_600 == 0: title = "\(seconds / 3_600) hours"
+            switch raw.windowDurationMins {
+            case 300: title = "5 hours"
+            case 10_080: title = "Week"
+            case let minutes? where minutes > 0 && minutes % 1_440 == 0: title = "\(minutes / 1_440) days"
+            case let minutes? where minutes > 0 && minutes % 60 == 0: title = "\(minutes / 60) hours"
             default: title = id == "primary" ? "Current window" : "Other window"
             }
             return UsageWindow(id: id, title: title, usedPercent: try percent(raw.usedPercent),
-                               resetsAt: raw.resetAt.map { Date(timeIntervalSince1970: $0) })
+                               resetsAt: raw.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0)) })
         }
         guard !windows.isEmpty else { throw UsageReadError.invalidResponse }
         return ServiceUsage(service: .codex, state: .ready, windows: windows, updatedAt: now)
@@ -71,22 +72,17 @@ private struct GrokBotResponse: Decodable {
 }
 
 private struct CodexResponse: Decodable {
-    let rateLimit: Limits?
-    enum CodingKeys: String, CodingKey { case rateLimit = "rate_limit" }
+    let rateLimits: Limits
+    let rateLimitsByLimitId: [String: Limits]?
     struct Limits: Decodable {
-        let primaryWindow: Window?
-        let secondaryWindow: Window?
-        enum CodingKeys: String, CodingKey {
-            case primaryWindow = "primary_window", secondaryWindow = "secondary_window"
-        }
+        let limitId: String?
+        let primary: Window?
+        let secondary: Window?
     }
     struct Window: Decodable {
         let usedPercent: Double
-        let limitWindowSeconds: Int?
-        let resetAt: Double?
-        enum CodingKeys: String, CodingKey {
-            case usedPercent = "used_percent", limitWindowSeconds = "limit_window_seconds", resetAt = "reset_at"
-        }
+        let windowDurationMins: Int?
+        let resetsAt: Int64?
     }
 }
 

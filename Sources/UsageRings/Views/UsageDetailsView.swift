@@ -17,6 +17,10 @@ struct UsageDetailsView: View {
                 .disabled(!store.isEnabled || store.isRefreshing)
             }
 
+            if store.needsConsent {
+                connectionExplanation
+            }
+
             TimelineView(.periodic(from: .now, by: 30)) { timeline in
                 UsageRingsView(snapshot: store.snapshot, date: timeline.date)
                     .padding(24)
@@ -30,10 +34,12 @@ struct UsageDetailsView: View {
             }
 
             Divider()
-            Toggle("Show AI usage", isOn: $store.isEnabled)
+            if !store.needsConsent {
+                Toggle("Show AI usage", isOn: Binding(get: { store.isEnabled }, set: store.setEnabled))
+            }
             Text("Refreshes every 5 minutes while Usage Rings is running. Claude usage comes from Claude Code activity.")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Text("Grok Bot uses the account signed in to Cursor on this Mac.")
+            Text("Codex requires an installed Codex CLI signed in with ChatGPT. Cursor and Grok Bot use the local Cursor session.")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Text("To add the widget, right-click your desktop, choose Edit Widgets, then search for Usage Rings.")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -44,6 +50,26 @@ struct UsageDetailsView: View {
         }
         .padding(24)
         .frame(width: 460)
+    }
+
+    private var connectionExplanation: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Connect your usage accounts").font(.headline)
+            Text("Usage Rings waits for you to enable monitoring. This also applies after updating from a version that connected automatically.")
+            Text("Codex uses the official local Codex CLI App Server. The CLI contacts OpenAI and may update its existing sign-in and local cache. Cursor and Grok Bot read the Cursor session on this Mac and contact their services. Claude usage is read from its optional local status-line cache.")
+            Text("Only usage and reset times are shared with the widget. Other apps on this Mac can read those display values. No usage data is sent to the Usage Rings developer.")
+            Text("You can stop future reads with Show AI usage. The separate Claude Code status-line helper is disconnected separately.")
+            HStack {
+                Link("Security and data FAQ", destination: URL(string: "https://github.com/hayashiii-ghub/usage-rings#security-and-data-faq")!)
+                Spacer()
+                Button("Enable AI usage") { store.enableAfterConsent() }
+                    .buttonStyle(.borderedProminent)
+            }
+        }
+        .font(.callout)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(16)
+        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 16))
     }
 
     private func details(_ usage: ServiceUsage, date: Date) -> some View {
@@ -78,9 +104,10 @@ struct UsageDetailsView: View {
     private func statusText(_ usage: ServiceUsage) -> String {
         switch usage.state {
         case .disabled: return "Enable AI usage to connect."
+        case .setupRequired: return "Install or update the Codex CLI, then refresh."
         case .signInRequired:
             switch usage.service {
-            case .codex: return "Sign in to Codex, then refresh."
+            case .codex: return "Sign in to the Codex CLI with ChatGPT, then refresh."
             case .cursor: return "Open Cursor and sign in, then refresh."
             case .claude: return "Use Claude Code, then refresh to receive usage."
             case .grokBot: return "Sign in to Cursor with your Grok Bot account, then refresh."

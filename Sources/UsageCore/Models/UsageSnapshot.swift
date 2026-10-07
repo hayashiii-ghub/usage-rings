@@ -16,7 +16,7 @@ public enum UsageService: String, Codable, CaseIterable, Identifiable, Sendable 
 }
 
 public enum UsageState: String, Codable, Sendable {
-    case ready, disabled, signInRequired, unavailable
+    case ready, disabled, setupRequired, signInRequired, unavailable
 }
 
 public struct UsageWindow: Codable, Equatable, Identifiable, Sendable {

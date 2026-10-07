@@ -16,11 +16,7 @@ enum UsageClient {
             let request: URLRequest
             switch service {
             case .codex:
-                let auth = try UsageCredentialReader.codex()
-                var value = URLRequest(url: URL(string: "https://chatgpt.com/backend-api/wham/usage")!)
-                value.setValue("Bearer \(auth.token)", forHTTPHeaderField: "Authorization")
-                if let accountID = auth.accountID { value.setValue(accountID, forHTTPHeaderField: "ChatGPT-Account-Id") }
-                request = value
+                return await CodexAppServerClient.fetch()
             case .cursor:
                 var value = URLRequest(url: URL(string: "https://cursor.com/api/usage-summary")!)
                 value.setValue(try UsageCredentialReader.cursorCookie(), forHTTPHeaderField: "Cookie")
@@ -39,7 +35,7 @@ enum UsageClient {
             }
             let data = try await read(request)
             switch service {
-            case .codex: return try UsageResponseParser.codex(data)
+            case .codex: throw UsageReadError.invalidResponse
             case .cursor: return try UsageResponseParser.cursor(data)
             case .claude: throw UsageReadError.invalidResponse
             case .grokBot: return try UsageResponseParser.grokBot(data)
