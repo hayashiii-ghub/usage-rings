@@ -19,10 +19,12 @@ To start it after login, add Usage Rings to macOS Login Items. There is no autom
 
 ## Distribution
 
-See [DISTRIBUTION.md](DISTRIBUTION.md) for versioned ZIPs, checksums, and the
-Developer ID / notarization steps. `make package-draft` prepares an explicitly
-unnotarized review artifact. `make package` requires signatures, a notarization
-ticket, and Gatekeeper acceptance before producing a public distribution artifact.
+Building and installing from source is the default distribution route and does
+not require paid Apple Developer membership. See [DISTRIBUTION.md](DISTRIBUTION.md)
+for that route, versioned ZIPs, and checksums. `make package-draft` prepares an
+explicitly unnotarized review artifact; a downloaded copy has not yet been tested
+on another Mac. Optional `make package` requires Developer ID signatures, a
+notarization ticket, and Gatekeeper acceptance for a notarized artifact.
 
 ## Accounts
 

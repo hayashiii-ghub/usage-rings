@@ -4,6 +4,40 @@ Usage Rings requires macOS 26+. The current local build produces Apple silicon
 (`arm64`) code; packaging reads all three binaries and labels the actual architecture.
 Intel or universal support needs a separate build and device verification.
 
+## Distribution without paid Apple Developer membership
+
+The default installation route is to build the published source locally using
+macOS 26+ and Xcode, following [Install or update](README.md#install-or-update).
+Paid Apple Developer membership is not required. `make install` installs and
+opens the app and connects Claude Code's status line when no custom command
+exists; the README explains that behavior. To inspect a build first without
+installing or connecting the helper, use `make check` followed by `make build`.
+
+An unnotarized ZIP is a separate preview option. Developer ID signing and Apple
+notarization are optional future distribution work, not remaining requirements
+for the source installation route.
+
+Use `make package-draft` to prepare this artifact. Keep the `draft-unnotarized`
+filename and disclose its ad-hoc signing state; it has no Apple-verified developer
+identity or notarization. GitHub draft status is separate from signing status:
+the release stays unpublished until an explicit publishing decision.
+
+Before publishing, verify a downloaded ZIP on another supported Mac, including
+first launch and desktop widget registration. Updating an existing installation
+on the development Mac does not establish that a fresh download works elsewhere.
+Keep the current release a draft until those checks are complete.
+
+Recipients should verify the checksum and extract the app as described below.
+If macOS blocks opening it because the developer cannot be verified, Apple's
+[instructions for opening an app from an unknown developer](https://support.apple.com/guide/mac-help/mh40616/mac)
+describe the per-app **Open Anyway** option in **System Settings → Privacy &
+Security**. The recipient should use that option only after deciding they trust
+this source. It may not be available under managed-device policies, and it does
+not guarantee the widget will register. Do not use it for a malware warning or
+a failed integrity check; stop and investigate those failures. Do not disable
+Gatekeeper globally or remove quarantine attributes. Building from reviewed
+source is an alternative for users with the required local development tools.
+
 ## Prepare a review artifact
 
 Start from a clean committed checkout and run the required checks before building:
@@ -27,13 +61,13 @@ Only the app bundle goes into the ZIP; no settings, accounts, caches, or source
 checkout are added. The ZIP is unpacked and verified before the files are emitted.
 The manifest records the actual signing state of the app, widget, and helper.
 
-These draft artifacts are for review. An ad-hoc signature provides bundle
+These draft artifacts are initially for review. An ad-hoc signature provides bundle
 integrity but no verified developer identity or notarization. A downloaded copy
 may be rejected by Gatekeeper. Keep any initial GitHub Release a **draft** and
 explicitly label its assets unnotarized. Do not present it as ready for public
 installation or ask recipients to disable Gatekeeper or remove quarantine.
 
-## Prepare a notarized public artifact
+## Optional: prepare a notarized public artifact
 
 This path requires an already installed **Developer ID Application** certificate
 and private key, and already configured notarization access. Certificate issuance,
