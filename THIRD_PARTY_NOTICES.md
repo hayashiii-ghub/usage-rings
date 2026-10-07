@@ -62,6 +62,6 @@ SOFTWARE.
 
 ## Grok Bot
 
-The monochrome character glyph is adapted from the installed Grok Bot application
-icon for identification in this personal usage monitor. Grok Bot and its character
+The monochrome character glyph is redrawn from a user-provided reference of the
+Grok Bot application icon for identification in this usage monitor. Grok Bot and its character
 mark belong to their respective owners. No affiliation or endorsement is implied.

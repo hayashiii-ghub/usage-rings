@@ -1,7 +1,7 @@
 # Usage Rings
 
 Personal macOS widget for remaining Codex, Claude, Cursor, and Grok Bot usage.
-Requires macOS 26+ and Xcode to build. This is independent of Context.
+Requires macOS 26+; Xcode is only needed to build from source. This is independent of Context.
 
 ## Install or update
 
@@ -79,6 +79,66 @@ The small widget uses a 2 × 2 grid of rings without percentage labels; VoiceOve
 still reads each provider's remaining percentage. Missing or expired readings
 show a **—** badge on the small ring. The medium widget keeps percentages below
 the rings.
+
+## Security and data FAQ
+
+### Does Usage Rings send data to its developer?
+
+No. The app has no developer-operated collection server or analytics. It makes
+authenticated HTTPS requests to the matching service to retrieve usage: Codex at
+`chatgpt.com`, Cursor at `cursor.com`, and Grok Bot at `api2.cursor.sh` using the
+Cursor session. These requests contain the credentials required by that service.
+Redirects are rejected. Claude usage is read locally from official Claude Code
+status-line output; Usage Rings makes no Claude API requests.
+
+### Does it read my login details or conversations?
+
+For Codex, the app reads the existing session from `~/.codex/auth.json`. For Cursor
+and Grok Bot, it reads Cursor's local session database in read-only mode. These
+credentials are used in memory for the matching service's request and are not
+copied into the widget cache or logs. The app does not refresh tokens or change
+your accounts. It does not read Claude credentials, Keychain items, or conversation
+files. The optional Claude helper receives status-line input, but saves only the
+two main usage windows, receipt time, and hashed response markers—not the full
+input, conversation paths, or workspace metadata.
+
+### What is saved, and who can see it?
+
+The widget caches display data on this Mac: provider status, usage percentages,
+reset times, and update times. Claude's helper saves its separate local cache
+under `~/Library/Caches/Usage Rings/`. Cache files use owner-only permissions.
+There is no usage-history database or cloud sync.
+
+The app shares display data with the widget over `127.0.0.1:52388`, which is
+accessible only on this Mac, not over the LAN. It does not expose credentials.
+Other processes on the same Mac can read this bridge; its request header is not
+authentication, and it is not a security boundary against other local apps.
+
+### What happens when I turn off Show AI usage?
+
+The app stops scheduled polling and wake refreshes, clears its current display
+data, and asks macOS to refresh the widget. It does not delete your sign-ins or
+guarantee that an already-started request stops immediately. The local bridge
+remains running with empty data, and the widget may retain its cache until macOS
+updates it. Turning this setting off does not disconnect the optional Claude
+status-line helper; use the disconnect command above to stop that integration.
+
+### Is this an official integration, and are the numbers always current?
+
+Usage Rings is an independent project, not endorsed by the providers. Codex,
+Cursor, and Grok Bot use internal endpoints whose compatibility or permitted use
+may change; provider approval is not established. Claude uses documented
+status-line output. The app normally refreshes every five minutes, and macOS
+controls widget updates. Missing or failed readings, readings older than 20
+minutes, and passed reset times show **—** instead of an invented percentage.
+
+### Why does macOS show a warning when opening the download?
+
+The current download is not notarized by Apple and is not distributed through the
+App Store. Download from this repository's Releases page and check the published
+checksums. Checksums help detect a mismatched download; they do not establish
+Apple approval or prove the app is safe. If you trust the source, follow Apple's
+per-app approval instructions linked above. Never disable Gatekeeper globally.
 
 ## Development
 
