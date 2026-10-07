@@ -58,13 +58,37 @@ macOS controls widget updates. Missing/failed readings, values older than 20 min
 and passed reset times display **—** until a new reading arrives. Extra spending
 allowances are not substituted for included quota percentages.
 
+The small widget uses a 2 × 2 grid of rings without percentage labels; VoiceOver
+still reads each provider's remaining percentage. Missing or expired readings
+show a **—** badge on the small ring. The medium widget keeps percentages below
+the rings.
+
 ## Development
 
 ```sh
 make check   # parser, credential, snapshot, and bridge tests
 make build   # build and verify signed app + widget bundles
 make run     # run from dist without installing
+swift run WidgetPreview dist/widget-preview.png # synthetic small/medium, light/dark fixture sheet
+swift run WidgetPreview dist/widget-comparison.png dist/widget-before.png # compare with a saved baseline
 ```
+
+`WidgetPreview` renders the production SwiftUI rings without starting the app,
+reading credentials, contacting providers, or changing installed widgets. It
+covers normal, missing, expired, and high/exhausted usage. The sheet uses fixed
+170 × 170 and 360 × 170 point canvases; it does not emulate WidgetKit's desktop
+compositing or the system's widget update scheduling.
+
+### Source layout
+
+- `Sources/UsageRings`: app entry point, `Views`, `Stores`, `Services`, and window `Support`.
+- `Sources/UsageCore/Models`: shared usage values and freshness rules.
+- `Sources/UsageCore/Parsing`: provider responses and official Claude status-line input.
+- `Sources/UsageCore/Persistence`: sanitized snapshot and Claude status-line caches.
+- `Sources/UsageCore/Views`: shared ring composition and provider marks; SVG assets stay in `Resources`.
+- `Sources/UsageRingsWidget/Timeline`: timeline entries, preview data, and expiry scheduling.
+- `Sources/UsageRingsWidget/Views`: WidgetKit view configuration; the snapshot reader stays at the target root.
+- `Tools/WidgetPreview`: offline visual fixture renderer, excluded from the installed app bundle.
 
 The Grok Bot mark is a transparent monochrome character glyph sized to match the
 other provider marks. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for sources.

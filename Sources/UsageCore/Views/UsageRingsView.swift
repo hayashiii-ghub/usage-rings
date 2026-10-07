@@ -13,12 +13,13 @@ public struct UsageRingsView: View {
 
     public var body: some View {
         GeometryReader { geometry in
-            let size = max(1, min(compact ? (geometry.size.width - 20) / 2 : (geometry.size.width - 48) / 4,
-                           compact ? (geometry.size.height - 54) / 2 : geometry.size.height * 0.62))
+            // The small widget has no percentage rows: use the full square for its 2 × 2 grid.
+            let size = max(1, min(compact ? (geometry.size.width - 14) / 2 : (geometry.size.width - 48) / 4,
+                           compact ? (geometry.size.height - 14) / 2 : geometry.size.height * 0.62))
             if compact {
                 VStack(spacing: 14) {
-                    HStack(spacing: 20) { ring(.codex, size: size); ring(.claude, size: size) }
-                    HStack(spacing: 20) { ring(.cursor, size: size); fourthRing(size: size) }
+                    HStack(spacing: 14) { ring(.codex, size: size); ring(.claude, size: size) }
+                    HStack(spacing: 14) { ring(.cursor, size: size); ring(.grokBot, size: size) }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -26,22 +27,17 @@ public struct UsageRingsView: View {
                     ring(.codex, size: size)
                     ring(.claude, size: size)
                     ring(.cursor, size: size)
-                    fourthRing(size: size)
+                    ring(.grokBot, size: size)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
 
-    @ViewBuilder
-    private func fourthRing(size: CGFloat) -> some View {
-        ring(.grokBot, size: size)
-    }
-
     private func ring(_ service: UsageService, size: CGFloat) -> some View {
         let usage = snapshot.usage(for: service)
         let remaining = usage.remainingPercent(at: date)
-        return VStack(spacing: compact ? 5 : 16) {
+        return VStack(spacing: 16) {
             ZStack {
                 track(size: size)
                 if let remaining, remaining > 0 {
@@ -53,25 +49,31 @@ public struct UsageRingsView: View {
                 }
                 ServiceMark(service: service)
                     .foregroundStyle(remaining == nil ? .secondary : .primary)
-                    .frame(width: size * 0.43, height: size * 0.43)
+                    .frame(width: size * 0.60, height: size * 0.60)
             }
             .frame(width: size, height: size)
-            Text(remaining.map { "\(Int($0.rounded()))%" } ?? "—")
-                .font(.system(size: compact ? 12 : size * 0.27, weight: .regular))
-                .monospacedDigit()
-                .foregroundStyle(remaining == nil ? .secondary : .primary)
+            .overlay(alignment: .bottom) {
+                // Preserve an explicit unknown state without reserving a percentage row.
+                // A current, exhausted allowance has no badge; stale data never looks current.
+                if compact && remaining == nil {
+                    Text("—")
+                        .font(.system(size: size * 0.22, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 3)
+                        .background(.background, in: Capsule())
+                        .offset(y: 2)
+                }
+            }
+            if !compact {
+                Text(remaining.map { "\(Int($0.rounded()))%" } ?? "—")
+                    .font(.system(size: size * 0.27, weight: .regular))
+                    .monospacedDigit()
+                    .foregroundStyle(remaining == nil ? .secondary : .primary)
+            }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(service.name)
         .accessibilityValue(remaining.map { "\(Int($0.rounded())) percent remaining" } ?? "Usage unavailable. Open Usage Rings to refresh.")
-    }
-
-    private func empty(size: CGFloat) -> some View {
-        VStack(spacing: compact ? 5 : 16) {
-            track(size: size).frame(width: size, height: size)
-            Text(" ").font(.system(size: compact ? 12 : size * 0.27))
-        }
-        .accessibilityHidden(true)
     }
 
     private func track(size: CGFloat) -> some View {
@@ -80,26 +82,5 @@ public struct UsageRingsView: View {
 
     private func color(_ remaining: Double) -> Color {
         remaining <= 10 ? .red : remaining <= 20 ? .yellow : .green
-    }
-}
-
-private struct ServiceMark: View {
-    let service: UsageService
-
-    var body: some View {
-        Image(nsImage: mark)
-            .renderingMode(.template)
-            .resizable()
-            .scaledToFit()
-            .accessibilityHidden(true)
-    }
-
-    private var mark: NSImage {
-        let resources = Bundle.main.resourceURL.flatMap {
-            Bundle(url: $0.appendingPathComponent("UsageRings_UsageCore.bundle"))
-        } ?? Bundle.module
-        guard let url = resources.url(forResource: service.rawValue, withExtension: "svg", subdirectory: "Resources"),
-              let image = NSImage(contentsOf: url) else { return NSImage() }
-        return image
     }
 }
