@@ -5,17 +5,34 @@ Requires macOS 26+ and Xcode to build. This is independent of Context.
 
 ## Install or update
 
-```sh
-make install
-```
+Download the latest [DMG](https://github.com/hayashiii-ghub/usage-rings/releases/latest/download/usage-rings-macos.dmg)
+or browse [GitHub Releases](https://github.com/hayashiii-ghub/usage-rings/releases).
+Requires **macOS 26+ and Apple silicon**; Xcode is not needed to use the download.
 
-The app installs into `~/Applications/Usage Rings.app` and opens its detail window.
-Right-click the desktop, choose **Edit Widgets**, and add **Usage Rings → AI Usage**.
-Keep the app running; it refreshes every five minutes and after waking from sleep.
-The menu-bar icon opens details or quits the app.
-Installation also connects Claude Code’s status line to the bundled helper; an existing
-custom status line is preserved and must be composed manually before connecting. There is no automatic updater or
-GitHub Release workflow. To start it after login, add Usage Rings to macOS Login Items.
+Open the DMG, quit any running Usage Rings, and drag the app to Applications.
+When updating, replace the existing copy in its current location instead of
+installing a second copy. Open the installed app, then right-click the desktop,
+choose **Edit Widgets**, and add **Usage Rings → AI Usage**. Keep the app running;
+it refreshes every five minutes and after waking from sleep. There is no automatic
+updater. Add the app to Login Items if desired.
+
+The app is **not notarized by Apple**. macOS may block the first launch. If you
+trust the source, follow Apple's [per-app approval instructions](https://support.apple.com/102445)
+under **System Settings → Privacy & Security → Open Anyway**. See
+[DISTRIBUTION.md](DISTRIBUTION.md) for checksums, installation limits, and optional
+Claude Code status-line setup. The download does not change that setup automatically.
+
+To build and install from source instead, use `make install` with Xcode installed.
+It installs to `~/Applications` and connects Claude Code's status line when no
+custom command exists. Existing custom commands are preserved and must be composed
+manually. Paid Apple Developer membership is not required.
+
+## Distribution
+
+`make package-unnotarized` produces the DMG, ZIP, build manifest, and checksums for
+this release route. `make package-draft` creates a review ZIP. The optional
+`make package` command requires Developer ID signing and notarization; those are
+not part of the current release plan. See [DISTRIBUTION.md](DISTRIBUTION.md).
 
 ## Accounts
 

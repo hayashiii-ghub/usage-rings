@@ -2,8 +2,8 @@
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+source "$ROOT_DIR/script/build-metadata.sh"
 export SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
-CONFIGURATION="${CONFIGURATION:-release}"
 swift build -c "$CONFIGURATION"
 BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
 APP="$ROOT_DIR/dist/Usage Rings.app"
@@ -57,8 +57,15 @@ cat > "$WIDGET/Contents/Info.plist" <<'PLIST'
 <key>NSExtension</key><dict><key>NSExtensionPointIdentifier</key><string>com.apple.widgetkit-extension</string></dict>
 </dict></plist>
 PLIST
-codesign --force --sign - --entitlements "$ROOT_DIR/Assets/Widget.entitlements" "$WIDGET"
-codesign --force --sign - "$APP/Contents/Helpers/UsageRingsStatusline"
-codesign --force --sign - "$APP"
+for BUNDLE in "$APP" "$WIDGET"; do
+  /usr/bin/plutil -replace CFBundleShortVersionString -string "$APP_VERSION" "$BUNDLE/Contents/Info.plist"
+  /usr/bin/plutil -replace CFBundleVersion -string "$APP_BUILD" "$BUNDLE/Contents/Info.plist"
+  /usr/bin/plutil -insert UsageRingsSourceRevision -string "$SOURCE_REVISION" "$BUNDLE/Contents/Info.plist"
+  /usr/bin/plutil -insert UsageRingsSourceDirty -bool "$SOURCE_DIRTY" "$BUNDLE/Contents/Info.plist"
+  /usr/bin/plutil -insert UsageRingsBuildConfiguration -string "$CONFIGURATION" "$BUNDLE/Contents/Info.plist"
+done
+codesign "${SIGNING_ARGS[@]}" --entitlements "$ROOT_DIR/Assets/Widget.entitlements" "$WIDGET"
+codesign "${SIGNING_ARGS[@]}" "$APP/Contents/Helpers/UsageRingsStatusline"
+codesign "${SIGNING_ARGS[@]}" "$APP"
 codesign --verify --deep --strict "$APP"
 echo "$APP"

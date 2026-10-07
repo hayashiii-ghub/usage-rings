@@ -5,4 +5,5 @@ cd "$ROOT_DIR"
 export SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
 swift test
 PYTHONDONTWRITEBYTECODE=1 python3 "$ROOT_DIR/script/test_claude_statusline_setup.py"
+PYTHONDONTWRITEBYTECODE=1 python3 "$ROOT_DIR/script/test_distribution.py"
 for script in script/*.sh; do bash -n "$script"; done
